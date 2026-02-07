@@ -1,6 +1,6 @@
 {
-  "id": "33a562dc-3841-4c32-be70-768b554f48f0",
-  "prevId": "3784df86-7ce0-4243-90f2-d559bed45d24",
+  "id": "c7c0aa44-8714-4a7c-b7ed-747b7bc2e0a7",
+  "prevId": "65d562dc-3841-4c32-be70-768b554f48f0",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -463,6 +463,206 @@
           "nullsNotDistinct": false,
           "columns": [
             "code"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.teacher_classes": {
+      "name": "teacher_classes",
+      "schema": "",
+      "columns": {
+        "teacher_id": {
+          "name": "teacher_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "class_id": {
+          "name": "class_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "teacher_classes_teacher_id_idx": {
+          "name": "teacher_classes_teacher_id_idx",
+          "columns": [
+            {
+              "expression": "teacher_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "teacher_classes_class_id_idx": {
+          "name": "teacher_classes_class_id_idx",
+          "columns": [
+            {
+              "expression": "class_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "teacher_classes_teacher_id_user_id_fk": {
+          "name": "teacher_classes_teacher_id_user_id_fk",
+          "tableFrom": "teacher_classes",
+          "tableTo": "user",
+          "columnsFrom": [
+            "teacher_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "teacher_classes_class_id_classes_id_fk": {
+          "name": "teacher_classes_class_id_classes_id_fk",
+          "tableFrom": "teacher_classes",
+          "tableTo": "classes",
+          "columnsFrom": [
+            "class_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "teacher_classes_teacher_id_class_id_pk": {
+          "name": "teacher_classes_teacher_id_class_id_pk",
+          "columns": [
+            "teacher_id",
+            "class_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "teacher_classes_teacher_id_class_id_unique": {
+          "name": "teacher_classes_teacher_id_class_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "teacher_id",
+            "class_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.teacher_departments": {
+      "name": "teacher_departments",
+      "schema": "",
+      "columns": {
+        "teacher_id": {
+          "name": "teacher_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "department_id": {
+          "name": "department_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "teacher_departments_teacher_id_idx": {
+          "name": "teacher_departments_teacher_id_idx",
+          "columns": [
+            {
+              "expression": "teacher_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "teacher_departments_department_id_idx": {
+          "name": "teacher_departments_department_id_idx",
+          "columns": [
+            {
+              "expression": "department_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "teacher_departments_teacher_id_user_id_fk": {
+          "name": "teacher_departments_teacher_id_user_id_fk",
+          "tableFrom": "teacher_departments",
+          "tableTo": "user",
+          "columnsFrom": [
+            "teacher_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "teacher_departments_department_id_departments_id_fk": {
+          "name": "teacher_departments_department_id_departments_id_fk",
+          "tableFrom": "teacher_departments",
+          "tableTo": "departments",
+          "columnsFrom": [
+            "department_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "teacher_departments_teacher_id_department_id_pk": {
+          "name": "teacher_departments_teacher_id_department_id_pk",
+          "columns": [
+            "teacher_id",
+            "department_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "teacher_departments_teacher_id_department_id_unique": {
+          "name": "teacher_departments_teacher_id_department_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "teacher_id",
+            "department_id"
           ]
         }
       },

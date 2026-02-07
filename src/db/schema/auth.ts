@@ -21,6 +21,7 @@ export const user = pgTable("user", {
     gender: text("gender"),
     joiningDate: timestamp("joining_date"),
     bio: text("bio"),
+    phoneNumber: text("phone_number"),
     ...timestamps
 });
 
