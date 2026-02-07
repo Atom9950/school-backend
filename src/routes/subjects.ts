@@ -72,4 +72,50 @@ router.get("/", async (req, res) => {
     }
 })
 
+// Create a new subject
+router.post("/", async (req, res) => {
+    try {
+        const { name, code, description, department } = req.body;
+
+        // Validate required fields
+        if (!name || !code || !description || !department) {
+            return res.status(400).json({ 
+                error: "Missing required fields: name, code, description, department" 
+            });
+        }
+
+        // Get the department by name to get its ID
+        const deptResult = await db.select({id: departments.id})
+            .from(departments)
+            .where(ilike(departments.name, department))
+            .limit(1);
+
+        if (deptResult.length === 0) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        const departmentId = deptResult[0].id;
+
+        // Create the subject
+        const result = await db.insert(subjects)
+            .values({
+                name,
+                code,
+                description,
+                departmentId,
+                createdAt: new Date(),
+                updatedAt: new Date()
+            })
+            .returning();
+
+        res.status(201).json({
+            data: result[0],
+            message: "Subject created successfully"
+        });
+    } catch (error) {
+        console.error(`POST /subjects error: ${error}`);
+        res.status(500).json({ error: "Failed to create subject" });
+    }
+})
+
 export default router;
