@@ -16,6 +16,10 @@ export const user = pgTable("user", {
     image: text("image"),
     role: roleEnum("role").default("student").notNull(),
     imageCldPubId: text("image_cld_pub_id"),
+    address: text("address"),
+    age: text("age"),
+    gender: text("gender"),
+    joiningDate: timestamp("joining_date"),
     ...timestamps
 });
 

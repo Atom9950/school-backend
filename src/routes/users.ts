@@ -2,7 +2,7 @@ import express from "express";
 import {and, desc, eq, getTableColumns, ilike, or, sql} from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
-import {user} from "../db/schema/index.js";
+import {user, classes} from "../db/schema/index.js";
 import { db } from "../db/index.js";
 
 const router = express.Router();
@@ -98,7 +98,21 @@ router.get("/:id", async (req, res) => {
 // Create a new user
 router.post("/", async (req, res) => {
     try {
-        const { name, email, role = "teacher", image, imageCldPubId } = req.body;
+        const { 
+            name, 
+            email, 
+            role = "teacher", 
+            image, 
+            imageCldPubId,
+            address,
+            age,
+            gender,
+            joiningDate,
+            bannerUrl,
+            bannerCldPubId
+        } = req.body;
+
+        console.log("POST /users request body:", req.body);
 
         // Validate required fields
         if (!name || !email) {
@@ -127,8 +141,12 @@ router.post("/", async (req, res) => {
                 email,
                 role: role as any,
                 emailVerified: false,
-                image: image || null,
-                imageCldPubId: imageCldPubId || null,
+                image: bannerUrl || image || null,
+                imageCldPubId: bannerCldPubId || imageCldPubId || null,
+                address: address || null,
+                age: age ? age.toString() : null,
+                gender: gender || null,
+                joiningDate: joiningDate ? new Date(joiningDate) : null,
                 createdAt: new Date(),
                 updatedAt: new Date()
             })
@@ -141,6 +159,85 @@ router.post("/", async (req, res) => {
     } catch (error) {
         console.error(`POST /users error: ${error}`);
         res.status(500).json({ error: "Failed to create user" });
+    }
+})
+
+// Update a user
+router.put("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { 
+            name, 
+            email, 
+            address,
+            age,
+            gender,
+            joiningDate,
+            bannerUrl,
+            bannerCldPubId
+        } = req.body;
+
+        // Check if user exists
+        const userRecord = await db
+            .select({ id: user.id })
+            .from(user)
+            .where(eq(user.id, id))
+            .limit(1);
+
+        if (userRecord.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Update the user
+        const result = await db
+            .update(user)
+            .set({
+                ...(name && { name }),
+                ...(email && { email }),
+                ...(address && { address }),
+                ...(age && { age: age.toString() }),
+                ...(gender && { gender }),
+                ...(joiningDate && { joiningDate: new Date(joiningDate) }),
+                ...(bannerUrl && { image: bannerUrl }),
+                ...(bannerCldPubId && { imageCldPubId: bannerCldPubId }),
+                updatedAt: new Date()
+            })
+            .where(eq(user.id, id))
+            .returning();
+
+        res.status(200).json({
+            data: result[0],
+            message: "User updated successfully"
+        });
+    } catch (error) {
+        console.error(`PUT /users/:id error: ${error}`);
+        res.status(500).json({ error: "Failed to update user" });
+    }
+})
+
+// Delete a user
+router.delete("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if user exists
+        const userRecord = await db
+            .select({ id: user.id })
+            .from(user)
+            .where(eq(user.id, id))
+            .limit(1);
+
+        if (userRecord.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Delete the user (classes will be unassigned via CASCADE SET NULL)
+        await db.delete(user).where(eq(user.id, id));
+
+        res.status(200).json({ message: "User deleted successfully" });
+    } catch (error) {
+        console.error(`DELETE /users/:id error: ${error}`);
+        res.status(500).json({ error: "Failed to delete user" });
     }
 })
 

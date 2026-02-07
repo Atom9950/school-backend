@@ -43,7 +43,7 @@ export const subjects = pgTable('subjects', {
 export const classes = pgTable('classes', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     subjectId: integer('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
-    teacherId: text('teacher_id').notNull().references(() => user.id, { onDelete: 'restrict' }),
+    teacherId: text('teacher_id').references(() => user.id, { onDelete: 'set null' }),
     inviteCode: text('invite_code').notNull().unique(),
     name: varchar('name', {length: 255}).notNull(),
     bannerCldPubId: text('banner_cld_pub_id'),
