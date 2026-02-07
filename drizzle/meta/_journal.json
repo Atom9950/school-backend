@@ -29,13 +29,6 @@
       "when": 1770462994506,
       "tag": "0003_far_proemial_gods",
       "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1770491098480,
-      "tag": "0004_add_teacher_personal_fields",
-      "breakpoints": true
     }
   ]
 }

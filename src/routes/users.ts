@@ -137,6 +137,7 @@ router.post("/", async (req, res) => {
             joiningDate,
             bannerUrl,
             bannerCldPubId,
+            bio,
             allocatedDepartments,
             allocatedClasses
         } = req.body;
@@ -176,6 +177,7 @@ router.post("/", async (req, res) => {
                 age: age ? age.toString() : null,
                 gender: gender || null,
                 joiningDate: joiningDate ? new Date(joiningDate) : null,
+                bio: bio || null,
                 createdAt: new Date(),
                 updatedAt: new Date()
             })
@@ -231,7 +233,8 @@ router.put("/:id", async (req, res) => {
             gender,
             joiningDate,
             bannerUrl,
-            bannerCldPubId
+            bannerCldPubId,
+            bio
         } = req.body;
 
         // Check if user exists
@@ -257,6 +260,7 @@ router.put("/:id", async (req, res) => {
                 ...(joiningDate && { joiningDate: new Date(joiningDate) }),
                 ...(bannerUrl && { image: bannerUrl }),
                 ...(bannerCldPubId && { imageCldPubId: bannerCldPubId }),
+                ...(bio !== undefined && { bio: bio || null }),
                 updatedAt: new Date()
             })
             .where(eq(user.id, id))
