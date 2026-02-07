@@ -2,7 +2,7 @@ import express from "express";
 import {and, desc, eq, getTableColumns, ilike, or, sql} from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
-import {user, classes} from "../db/schema/index.js";
+import {user, classes, departments, teacherDepartments, teacherClasses} from "../db/schema/index.js";
 import { db } from "../db/index.js";
 
 const router = express.Router();
@@ -86,8 +86,35 @@ router.get("/:id", async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
+        const userData = userRecord[0]!;
+        let allocatedDepartments: typeof departments.$inferSelect[] = [];
+        let allocatedClasses: typeof classes.$inferSelect[] = [];
+
+        // If user is a teacher, fetch allocated departments and classes
+        if (userData.role === 'teacher') {
+            allocatedDepartments = await db
+                .select({
+                    ...getTableColumns(departments),
+                })
+                .from(departments)
+                .innerJoin(teacherDepartments, eq(departments.id, teacherDepartments.departmentId))
+                .where(eq(teacherDepartments.teacherId, id));
+
+            allocatedClasses = await db
+                .select({
+                    ...getTableColumns(classes),
+                })
+                .from(classes)
+                .innerJoin(teacherClasses, eq(classes.id, teacherClasses.classId))
+                .where(eq(teacherClasses.teacherId, id));
+        }
+
         res.status(200).json({
-            data: userRecord[0]
+            data: {
+                ...userRecord[0],
+                departments: allocatedDepartments,
+                classes: allocatedClasses
+            }
         });
     } catch (e) {
         console.error(`GET /users/:id error: ${e}`);
@@ -109,7 +136,9 @@ router.post("/", async (req, res) => {
             gender,
             joiningDate,
             bannerUrl,
-            bannerCldPubId
+            bannerCldPubId,
+            allocatedDepartments,
+            allocatedClasses
         } = req.body;
 
         console.log("POST /users request body:", req.body);
@@ -151,6 +180,34 @@ router.post("/", async (req, res) => {
                 updatedAt: new Date()
             })
             .returning();
+
+        // If role is teacher and departments/classes are allocated, create the relationships
+        if (role === "teacher") {
+            // Add allocated departments
+            if (allocatedDepartments && Array.isArray(allocatedDepartments) && allocatedDepartments.length > 0) {
+                const departmentIds = await db
+                    .select({ id: departments.id })
+                    .from(departments)
+                    .where(or(...allocatedDepartments.map(deptName => eq(departments.name, deptName))));
+
+                if (departmentIds.length > 0) {
+                    await db.insert(teacherDepartments)
+                        .values(departmentIds.map(dept => ({
+                            teacherId: userId,
+                            departmentId: dept.id
+                        })));
+                }
+            }
+
+            // Add allocated classes
+            if (allocatedClasses && Array.isArray(allocatedClasses) && allocatedClasses.length > 0) {
+                await db.insert(teacherClasses)
+                    .values(allocatedClasses.map(classId => ({
+                        teacherId: userId,
+                        classId: classId
+                    })));
+            }
+        }
 
         res.status(201).json({
             data: result[0],

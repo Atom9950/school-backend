@@ -68,6 +68,26 @@ export const enrollments = pgTable('enrollments', {
     index('enrollments_class_id_idx').on(table.classId),
 ]);
 
+export const teacherDepartments = pgTable('teacher_departments', {
+    teacherId: text('teacher_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'cascade' }),
+}, (table) => [
+    primaryKey({ columns: [table.teacherId, table.departmentId] }),
+    unique('teacher_departments_teacher_id_department_id_unique').on(table.teacherId, table.departmentId),
+    index('teacher_departments_teacher_id_idx').on(table.teacherId),
+    index('teacher_departments_department_id_idx').on(table.departmentId),
+]);
+
+export const teacherClasses = pgTable('teacher_classes', {
+    teacherId: text('teacher_id').notNull().references(() => user.id, { onDelete: 'cascade' }),
+    classId: integer('class_id').notNull().references(() => classes.id, { onDelete: 'cascade' }),
+}, (table) => [
+    primaryKey({ columns: [table.teacherId, table.classId] }),
+    unique('teacher_classes_teacher_id_class_id_unique').on(table.teacherId, table.classId),
+    index('teacher_classes_teacher_id_idx').on(table.teacherId),
+    index('teacher_classes_class_id_idx').on(table.classId),
+]);
+
 export const departmentRelations = relations(departments, ({ many, one }) => ({
     subjects: many(subjects),
     headTeacher: one(user, {
@@ -107,6 +127,28 @@ export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
     }),
 }));
 
+export const teacherDepartmentsRelations = relations(teacherDepartments, ({ one }) => ({
+    teacher: one(user, {
+        fields: [teacherDepartments.teacherId],
+        references: [user.id],
+    }),
+    department: one(departments, {
+        fields: [teacherDepartments.departmentId],
+        references: [departments.id],
+    }),
+}));
+
+export const teacherClassesRelations = relations(teacherClasses, ({ one }) => ({
+    teacher: one(user, {
+        fields: [teacherClasses.teacherId],
+        references: [user.id],
+    }),
+    class: one(classes, {
+        fields: [teacherClasses.classId],
+        references: [classes.id],
+    }),
+}));
+
 export type Department = typeof departments.$inferSelect;
 export type NewDepartment = typeof departments.$inferInsert;
 
@@ -118,3 +160,9 @@ export type NewClass = typeof classes.$inferInsert;
 
 export type Enrollment = typeof enrollments.$inferSelect;
 export type NewEnrollment = typeof enrollments.$inferInsert;
+
+export type TeacherDepartment = typeof teacherDepartments.$inferSelect;
+export type NewTeacherDepartment = typeof teacherDepartments.$inferInsert;
+
+export type TeacherClass = typeof teacherClasses.$inferSelect;
+export type NewTeacherClass = typeof teacherClasses.$inferInsert;
