@@ -25,6 +25,9 @@ export const departments = pgTable('departments', {
     code: varchar('code', {length: 50}).notNull().unique(),
     name: varchar('name', {length: 255}).notNull(),
     description: varchar('description', {length: 255}),
+    bannerUrl: text('banner_url'),
+    bannerCldPubId: text('banner_cld_pub_id'),
+    headTeacherId: text('head_teacher_id').references(() => user.id, { onDelete: 'set null' }),
     ...timestamps
 });
 
@@ -65,7 +68,13 @@ export const enrollments = pgTable('enrollments', {
     index('enrollments_class_id_idx').on(table.classId),
 ]);
 
-export const departmentRelations = relations(departments, ({ many }) => ({ subjects: many(subjects) }));
+export const departmentRelations = relations(departments, ({ many, one }) => ({
+    subjects: many(subjects),
+    headTeacher: one(user, {
+        fields: [departments.headTeacherId],
+        references: [user.id],
+    })
+}));
 
 export const subjectsRelations = relations(subjects, ({ one, many }) => ({
     department: one(departments, {

@@ -22,6 +22,13 @@
       "when": 1770322161274,
       "tag": "0002_motionless_shotgun",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770462994506,
+      "tag": "0003_far_proemial_gods",
+      "breakpoints": true
     }
   ]
 }
