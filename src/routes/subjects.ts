@@ -87,14 +87,17 @@ router.post("/", async (req, res) => {
         // Get the department by name to get its ID
         const deptResult = await db.select({id: departments.id})
             .from(departments)
-            .where(ilike(departments.name, department))
+            .where(ilike(departments.name, String(department)))
             .limit(1);
 
         if (deptResult.length === 0) {
             return res.status(404).json({ error: "Department not found" });
         }
 
-        const departmentId = deptResult[0].id;
+        const departmentId = deptResult[0]?.id;
+        if (!departmentId) {
+            return res.status(404).json({ error: "Department not found" });
+        }
 
         // Create the subject
         const result = await db.insert(subjects)
