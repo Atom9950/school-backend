@@ -10,7 +10,7 @@ const router = express.Router();
 // Get all classes with optional search, filtering and pagination
 router.get("/", async (req, res) => {
     try {
-        const { search, subject, teacher, page = 1, limit = 10 } = req.query;
+        const { search, subject, teacher, department, page = 1, limit = 10 } = req.query;
 
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100); // Max 100 records per page
@@ -27,6 +27,14 @@ router.get("/", async (req, res) => {
                     ilike(classes.inviteCode, `%${search}%`)
                 )
             );
+        }
+
+        // If department filter exists, match department id
+        if (department) {
+            const departmentId = parseInt(String(department), 10);
+            if (!isNaN(departmentId)) {
+                filterConditions.push(eq(classes.departmentId, departmentId));
+            }
         }
 
         // If subject filter exists, match subject name
@@ -57,11 +65,13 @@ router.get("/", async (req, res) => {
             .select({
                 ...getTableColumns(classes),
                 subject: { ...getTableColumns(subjects) },
-                teacher: { ...getTableColumns(user) }
+                teacher: { ...getTableColumns(user) },
+                department: { ...getTableColumns(departments) }
             })
             .from(classes)
             .leftJoin(subjects, eq(classes.subjectId, subjects.id))
             .leftJoin(user, eq(classes.teacherId, user.id))
+            .leftJoin(departments, eq(classes.departmentId, departments.id))
             .where(whereClause)
             .orderBy(desc(classes.createdAt))
             .limit(limitPerPage)
@@ -105,7 +115,7 @@ router.get('/:id', async (req, res) => {
         .from(classes)
         .leftJoin(subjects, eq(classes.subjectId, subjects.id))
         .leftJoin(user, eq(classes.teacherId, user.id))
-        .leftJoin(departments, eq(subjects.departmentId, departments.id))
+        .leftJoin(departments, eq(classes.departmentId, departments.id))
         .where(eq(classes.id, classId))
 
     if(!classDetails) return res.status(404).json({ error: 'No Class found.' });

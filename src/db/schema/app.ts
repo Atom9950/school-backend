@@ -42,6 +42,7 @@ export const subjects = pgTable('subjects', {
 
 export const classes = pgTable('classes', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'restrict' }),
     subjectId: integer('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
     teacherId: text('teacher_id').references(() => user.id, { onDelete: 'set null' }),
     inviteCode: text('invite_code').notNull().unique(),
@@ -54,6 +55,7 @@ export const classes = pgTable('classes', {
     schedules: jsonb('schedules').$type<any[]>().default([]).notNull(),
     ...timestamps
 }, (table) => [
+    index('classes_department_id_idx').on(table.departmentId),
     index('classes_subject_id_idx').on(table.subjectId),
     index('classes_teacher_id_idx').on(table.teacherId),
 ]);
