@@ -211,17 +211,17 @@ router.put("/:id", async (req, res) => {
         }
 
         // Check if new email already exists (and it's different from current email)
-        if (email && email !== existingStudent[0].email) {
-            const emailExists = await db
-                .select()
-                .from(students)
-                .where(eq(students.email, email))
-                .limit(1);
+         if (email && email !== existingStudent[0]?.email) {
+             const emailExists = await db
+                 .select()
+                 .from(students)
+                 .where(eq(students.email, email))
+                 .limit(1);
 
-            if (emailExists.length > 0) {
-                return res.status(400).json({ error: 'Email already exists' });
-            }
-        }
+             if (emailExists.length > 0) {
+                 return res.status(400).json({ error: 'Email already exists' });
+             }
+         }
 
         // Update student
         const updatedStudent = await db
