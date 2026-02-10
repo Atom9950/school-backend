@@ -90,6 +90,28 @@ export const teacherClasses = pgTable('teacher_classes', {
     index('teacher_classes_class_id_idx').on(table.classId),
 ]);
 
+export const students = pgTable('students', {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    name: varchar('name', {length: 255}).notNull(),
+    email: varchar('email', {length: 255}).notNull().unique(),
+    age: integer('age').notNull(),
+    gender: varchar('gender', {length: 50}).notNull(),
+    fathersName: varchar('fathers_name', {length: 255}),
+    mothersName: varchar('mothers_name', {length: 255}),
+    address: text('address'),
+    phoneNumber: varchar('phone_number', {length: 20}),
+    whatsappNumber: varchar('whatsapp_number', {length: 20}),
+    admissionDate: timestamp('admission_date').notNull(),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'restrict' }),
+    rollNumber: varchar('roll_number', {length: 50}),
+    image: text('image'),
+    imageCldPubId: text('image_cld_pub_id'),
+    ...timestamps
+}, (table) => [
+    index('students_department_id_idx').on(table.departmentId),
+    index('students_email_idx').on(table.email),
+]);
+
 export const departmentRelations = relations(departments, ({ many, one }) => ({
     subjects: many(subjects),
     headTeacher: one(user, {
@@ -151,6 +173,13 @@ export const teacherClassesRelations = relations(teacherClasses, ({ one }) => ({
     }),
 }));
 
+export const studentsRelations = relations(students, ({ one }) => ({
+    department: one(departments, {
+        fields: [students.departmentId],
+        references: [departments.id],
+    }),
+}));
+
 export type Department = typeof departments.$inferSelect;
 export type NewDepartment = typeof departments.$inferInsert;
 
@@ -168,3 +197,6 @@ export type NewTeacherDepartment = typeof teacherDepartments.$inferInsert;
 
 export type TeacherClass = typeof teacherClasses.$inferSelect;
 export type NewTeacherClass = typeof teacherClasses.$inferInsert;
+
+export type Student = typeof students.$inferSelect;
+export type NewStudent = typeof students.$inferInsert;
