@@ -1,6 +1,6 @@
 import express from "express";
 import { eq, getTableColumns } from "drizzle-orm";
-import { departments } from "../db/schema/index.js";
+import { departments, subjects, classes, enrollments } from "../db/schema/index.js";
 import { user } from "../db/schema/index.js";
 import { db } from "../db/index.js";
 
@@ -98,6 +98,66 @@ router.post("/", async (req, res) => {
   } catch (error) {
     console.error(`POST /departments error: ${error}`);
     res.status(500).json({ error: "Failed to create department" });
+  }
+});
+
+// Delete a department
+router.delete("/:id", async (req, res) => {
+  try {
+    const departmentId = Number(req.params.id);
+
+    if (!Number.isFinite(departmentId)) {
+      return res.status(400).json({ error: "Invalid department ID" });
+    }
+
+    // Get all subjects in this department
+    const departmentSubjects = await db
+      .select({ id: subjects.id })
+      .from(subjects)
+      .where(eq(subjects.departmentId, departmentId));
+
+    // Delete enrollments and classes for each subject
+    for (const subject of departmentSubjects) {
+      // Delete enrollments for classes in this subject
+      const subjectClasses = await db
+        .select({ id: classes.id })
+        .from(classes)
+        .where(eq(classes.subjectId, subject.id));
+
+      for (const classRecord of subjectClasses) {
+        await db
+          .delete(enrollments)
+          .where(eq(enrollments.classId, classRecord.id));
+      }
+
+      // Delete classes
+      await db
+        .delete(classes)
+        .where(eq(classes.subjectId, subject.id));
+    }
+
+    // Delete subjects
+    await db
+      .delete(subjects)
+      .where(eq(subjects.departmentId, departmentId));
+
+    // Delete the department
+    const result = await db
+      .delete(departments)
+      .where(eq(departments.id, departmentId))
+      .returning();
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: "Department not found" });
+    }
+
+    res.status(200).json({
+      data: result[0],
+      message: "Department deleted successfully",
+    });
+  } catch (error) {
+    console.error(`DELETE /departments/:id error: ${error}`);
+    res.status(500).json({ error: "Failed to delete department" });
   }
 });
 
