@@ -61,7 +61,8 @@ export function extractLevelFromDepartmentName(name: string): number | null {
     if (trimmed.includes("kg-2") || trimmed.includes("kg 2") || trimmed.includes("kg2")) return 3;
 
     // Class levels 1-12 (Arabic numerals)
-    for (let i = 1; i <= 12; i++) {
+    // Check from 12 down to 1 to avoid "class 1" matching "class 10", "class 11", "class 12"
+    for (let i = 12; i >= 1; i--) {
         const patterns = [
             `class ${i}`,
             `class-${i}`,
