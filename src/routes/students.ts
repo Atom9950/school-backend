@@ -130,9 +130,9 @@ router.post("/", async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        if (!name || !email || !age || !gender || !admissionDate || !departmentId) {
+        if (!name || !age || !gender || !admissionDate || !departmentId) {
             return res.status(400).json({
-                error: 'Missing required fields: name, email, age, gender, admissionDate, departmentId'
+                error: 'Missing required fields: name, age, gender, admissionDate, departmentId'
             });
         }
 

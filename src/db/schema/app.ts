@@ -93,7 +93,7 @@ export const teacherClasses = pgTable('teacher_classes', {
 export const students = pgTable('students', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     name: varchar('name', {length: 255}).notNull(),
-    email: varchar('email', {length: 255}).notNull().unique(),
+    email: varchar('email', {length: 255}).unique(),
     age: integer('age').notNull(),
     gender: varchar('gender', {length: 50}).notNull(),
     fathersName: varchar('fathers_name', {length: 255}),
