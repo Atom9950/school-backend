@@ -1,24 +1,56 @@
 import express from "express";
-import { eq, getTableColumns } from "drizzle-orm";
+import { eq, getTableColumns, sql } from "drizzle-orm";
 import { departments, subjects, classes, enrollments, teacherDepartments } from "../db/schema/index.js";
 import { user } from "../db/schema/index.js";
 import { db } from "../db/index.js";
+import { extractLevelFromDepartmentName, getValidDepartmentLevels } from "../lib/level-extractor.js";
 
 const router = express.Router();
 
-// Get all departments
+// Get valid department levels reference
+router.get("/levels/reference", (req, res) => {
+  const levels = getValidDepartmentLevels();
+  res.status(200).json({
+    data: levels,
+    message: "Valid department levels and their names"
+  });
+});
+
+// Get all departments with pagination
 router.get("/", async (req, res) => {
   try {
+    const { page = 1, limit = 10 } = req.query;
+    
+    const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+    const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
+    const offset = (currentPage - 1) * limitPerPage;
+
+    // Get total count
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(departments);
+
+    const totalCount = countResult[0]?.count ?? 0;
+
+    // Get paginated departments
     const departmentList = await db
       .select({
         ...getTableColumns(departments),
         headTeacher: getTableColumns(user),
       })
       .from(departments)
-      .leftJoin(user, eq(departments.headTeacherId, user.id));
+      .leftJoin(user, eq(departments.headTeacherId, user.id))
+      .limit(limitPerPage)
+      .offset(offset);
 
     res.status(200).json({
       data: departmentList,
+      pagination: {
+        page: currentPage,
+        limit: limitPerPage,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitPerPage),
+      }
     });
   } catch (error) {
     console.error(`GET /departments error: ${error}`);
@@ -86,6 +118,14 @@ router.post("/", async (req, res) => {
     // Generate a unique code from department name
     const code = name.toUpperCase().replace(/\s+/g, "_").substring(0, 50);
 
+    // Auto-extract level from department name
+    const level = extractLevelFromDepartmentName(name);
+    if (level === null) {
+      return res.status(400).json({ 
+        error: "Department name must be in format: Lower Nursery, Upper Nursery, KG-1, KG-2, Class 1-12" 
+      });
+    }
+
     const result = await db
       .insert(departments)
       .values({
@@ -95,6 +135,7 @@ router.post("/", async (req, res) => {
         bannerUrl,
         bannerCldPubId,
         headTeacherId,
+        level,
       })
       .returning();
 

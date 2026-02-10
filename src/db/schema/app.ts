@@ -28,6 +28,7 @@ export const departments = pgTable('departments', {
     bannerUrl: text('banner_url'),
     bannerCldPubId: text('banner_cld_pub_id'),
     headTeacherId: text('head_teacher_id').references(() => user.id, { onDelete: 'set null' }),
+    level: integer('level').notNull().default(1),
     ...timestamps
 });
 

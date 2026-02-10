@@ -1,5 +1,5 @@
 import express from "express";
-import { and, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gt, ilike, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 import { students, departments } from "../db/schema/index.js";
@@ -253,6 +253,134 @@ router.put("/:id", async (req, res) => {
     } catch (e) {
         console.error(`PUT /students/:id error: ${e}`);
         res.status(500).json({ error: 'Failed to update student' });
+    }
+})
+
+// Get available departments for promotion (departments with higher level than current)
+router.get("/:id/available-promotions", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if student exists
+        const studentRecord = await db
+            .select()
+            .from(students)
+            .where(eq(students.id, Number(id)))
+            .limit(1);
+
+        if (studentRecord.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        const student = studentRecord[0]!;
+        const currentDeptId = student.departmentId;
+
+        // Get current department level
+        const currentDept = await db
+            .select()
+            .from(departments)
+            .where(eq(departments.id, currentDeptId))
+            .limit(1);
+
+        if (currentDept.length === 0) {
+            return res.status(404).json({ error: 'Current department not found' });
+        }
+
+        const currentLevel = currentDept[0]!.level;
+
+        // Get all departments with higher level
+        const availableDepartments = await db
+            .select(getTableColumns(departments))
+            .from(departments)
+            .where(gt(departments.level, currentLevel))
+            .orderBy(departments.level);
+
+        res.status(200).json({
+            data: availableDepartments,
+            currentLevel: currentLevel,
+            currentDepartmentId: currentDeptId,
+        });
+
+    } catch (e) {
+        console.error(`GET /students/:id/available-promotions error: ${e}`);
+        res.status(500).json({ error: 'Failed to fetch available promotions' });
+    }
+})
+
+// Promote student to a new department
+router.post("/:id/promote", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { departmentId } = req.body;
+
+        if (!departmentId) {
+            return res.status(400).json({ error: 'Department ID is required' });
+        }
+
+        // Check if student exists
+        const existingStudent = await db
+            .select()
+            .from(students)
+            .where(eq(students.id, Number(id)))
+            .limit(1);
+
+        if (existingStudent.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        const student = existingStudent[0]!;
+
+        // Get current department level
+        const currentDept = await db
+            .select()
+            .from(departments)
+            .where(eq(departments.id, student.departmentId))
+            .limit(1);
+
+        if (currentDept.length === 0) {
+            return res.status(404).json({ error: 'Current department not found' });
+        }
+
+        const currentLevel = currentDept[0]!.level;
+
+        // Check if target department exists
+        const targetDept = await db
+            .select()
+            .from(departments)
+            .where(eq(departments.id, Number(departmentId)))
+            .limit(1);
+
+        if (targetDept.length === 0) {
+            return res.status(404).json({ error: 'Target department not found' });
+        }
+
+        // Validate that target department has higher level
+        if (targetDept[0]!.level <= currentLevel) {
+            return res.status(400).json({
+                error: 'Can only promote to a higher level department',
+                currentLevel,
+                targetLevel: targetDept[0]!.level
+            });
+        }
+
+        // Update student's department
+        const promotedStudent = await db
+            .update(students)
+            .set({
+                departmentId: Number(departmentId),
+                updatedAt: new Date(),
+            })
+            .where(eq(students.id, Number(id)))
+            .returning();
+
+        res.status(200).json({
+            data: promotedStudent[0],
+            message: 'Student promoted successfully'
+        });
+
+    } catch (e) {
+        console.error(`POST /students/:id/promote error: ${e}`);
+        res.status(500).json({ error: 'Failed to promote student' });
     }
 })
 
