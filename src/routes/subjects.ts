@@ -1,6 +1,6 @@
 import { and, count, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 import express from "express";
-import { departments, subjects } from "../db/schema/index.js";
+import { departments, subjects, classes, enrollments } from "../db/schema/index.js";
 import { db } from "../db/index.js";
 
 const router = express.Router()
@@ -118,6 +118,53 @@ router.post("/", async (req, res) => {
     } catch (error) {
         console.error(`POST /subjects error: ${error}`);
         res.status(500).json({ error: "Failed to create subject" });
+    }
+})
+
+// Delete a subject
+router.delete("/:id", async (req, res) => {
+    try {
+        const subjectId = Number(req.params.id);
+
+        if (!Number.isFinite(subjectId)) {
+            return res.status(400).json({ error: "Invalid subject ID" });
+        }
+
+        // Get all classes in this subject
+        const subjectClasses = await db
+            .select({ id: classes.id })
+            .from(classes)
+            .where(eq(classes.subjectId, subjectId));
+
+        // Delete enrollments for each class
+        for (const classRecord of subjectClasses) {
+            await db
+                .delete(enrollments)
+                .where(eq(enrollments.classId, classRecord.id));
+        }
+
+        // Delete classes
+        await db
+            .delete(classes)
+            .where(eq(classes.subjectId, subjectId));
+
+        // Delete the subject
+        const result = await db
+            .delete(subjects)
+            .where(eq(subjects.id, subjectId))
+            .returning();
+
+        if (result.length === 0) {
+            return res.status(404).json({ error: "Subject not found" });
+        }
+
+        res.status(200).json({
+            data: result[0],
+            message: "Subject deleted successfully",
+        });
+    } catch (error) {
+        console.error(`DELETE /subjects/:id error: ${error}`);
+        res.status(500).json({ error: "Failed to delete subject" });
     }
 })
 
