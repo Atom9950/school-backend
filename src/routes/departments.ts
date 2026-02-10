@@ -1,6 +1,6 @@
 import express from "express";
 import { eq, getTableColumns } from "drizzle-orm";
-import { departments, subjects, classes, enrollments } from "../db/schema/index.js";
+import { departments, subjects, classes, enrollments, teacherDepartments } from "../db/schema/index.js";
 import { user } from "../db/schema/index.js";
 import { db } from "../db/index.js";
 
@@ -48,7 +48,14 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Department not found" });
     }
 
-    res.status(200).json({ data: department });
+    // Fetch all teachers allocated to this department
+    const teachers = await db
+      .select(getTableColumns(user))
+      .from(user)
+      .innerJoin(teacherDepartments, eq(user.id, teacherDepartments.teacherId))
+      .where(eq(teacherDepartments.departmentId, departmentId));
+
+    res.status(200).json({ data: { ...department, teachers } });
   } catch (error) {
     console.error(`GET /departments/:id error: ${error}`);
     res.status(500).json({ error: "Failed to fetch department" });
