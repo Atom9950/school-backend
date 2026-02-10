@@ -129,4 +129,24 @@ router.post('/', async (req, res) => {
     }
 })
 
+router.delete('/:id', async (req, res) => {
+    try {
+        const classId = Number(req.params.id);
+
+        if(!Number.isFinite(classId)) return res.status(400).json({ error: 'Invalid class ID.' });
+
+        const [deletedClass] = await db
+            .delete(classes)
+            .where(eq(classes.id, classId))
+            .returning({ id: classes.id });
+
+        if(!deletedClass) return res.status(404).json({ error: 'Class not found.' });
+
+        res.status(200).json({ data: deletedClass });
+    } catch (e) {
+        console.error(`DELETE /classes/:id error ${e}`);
+        res.status(500).json({ error: 'Failed to delete class' })
+    }
+})
+
 export default router;
