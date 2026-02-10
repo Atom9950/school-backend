@@ -34,7 +34,7 @@ export const departments = pgTable('departments', {
 
 export const subjects = pgTable('subjects', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'restrict' }),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'cascade' }),
     name: varchar('name', {length: 255}).notNull(),
     code: varchar('code', {length: 50}).notNull().unique(),
     description: varchar('description', {length: 255}),
@@ -43,7 +43,7 @@ export const subjects = pgTable('subjects', {
 
 export const classes = pgTable('classes', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'restrict' }),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'cascade' }),
     subjectId: integer('subject_id').notNull().references(() => subjects.id, { onDelete: 'cascade' }),
     teacherId: text('teacher_id').references(() => user.id, { onDelete: 'set null' }),
     inviteCode: text('invite_code').notNull().unique(),
@@ -103,7 +103,7 @@ export const students = pgTable('students', {
     phoneNumber: varchar('phone_number', {length: 20}),
     whatsappNumber: varchar('whatsapp_number', {length: 20}),
     admissionDate: timestamp('admission_date').notNull(),
-    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'restrict' }),
+    departmentId: integer('department_id').notNull().references(() => departments.id, { onDelete: 'cascade' }),
     rollNumber: varchar('roll_number', {length: 50}),
     image: text('image'),
     imageCldPubId: text('image_cld_pub_id'),
