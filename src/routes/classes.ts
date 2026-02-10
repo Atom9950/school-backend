@@ -2,7 +2,7 @@ import express from "express";
 import {and, desc, eq, getTableColumns, ilike, or, sql} from "drizzle-orm";
 
 import {db} from "../db/index.js";
-import {classes, departments, subjects} from '../db/schema/app.js'
+import {classes, departments, subjects, teacherClasses} from '../db/schema/app.js'
 import { user } from '../db/schema/auth.js'
 
 const router = express.Router();
@@ -125,12 +125,24 @@ router.get('/:id', async (req, res) => {
 
 router.post('/', async (req, res) => {
     try {
+        const { teacherId, ...classData } = req.body;
+
         const [createdClass] = await db
             .insert(classes)
-            .values({...req.body, inviteCode: Math.random().toString(36).substring(2, 9), schedules: []})
+            .values({...classData, teacherId: teacherId || null, inviteCode: Math.random().toString(36).substring(2, 9), schedules: []})
             .returning({ id: classes.id });
 
         if(!createdClass) throw Error;
+
+        // If a teacher is assigned, add the relationship to teacherClasses
+        if (teacherId) {
+            await db.insert(teacherClasses).values({
+                teacherId: teacherId,
+                classId: createdClass.id
+            }).catch(e => {
+                console.warn(`Failed to insert teacherClasses relationship: ${e}`);
+            });
+        }
 
         res.status(201).json({ data: createdClass });
     } catch (e) {
