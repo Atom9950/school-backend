@@ -87,8 +87,29 @@ router.get("/", async (req, res) => {
                 .offset(offset);
         }
 
+        // For teachers, fetch their allocated departments
+        const usersWithDepartments = await Promise.all(
+            usersList.map(async (u) => {
+                if (u.role === 'teacher') {
+                    const allocatedDepartments = await db
+                        .select({
+                            ...getTableColumns(departments),
+                        })
+                        .from(departments)
+                        .innerJoin(teacherDepartments, eq(departments.id, teacherDepartments.departmentId))
+                        .where(eq(teacherDepartments.teacherId, u.id));
+                    
+                    return {
+                        ...u,
+                        departments: allocatedDepartments
+                    };
+                }
+                return u;
+            })
+        );
+
         res.status(200).json({
-            data: usersList,
+            data: usersWithDepartments,
             pagination: {
                 page: currentPage,
                 limit: limitPerPage,
