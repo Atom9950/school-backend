@@ -24,10 +24,9 @@ export const auth = betterAuth({
         rememberMe: 60 * 60 * 24 * 30,  // 30 days if rememberMe checked
     },
     cookie: {
-        sameSite: "lax",  // Lax is safer than none and works for cross-site
+        sameSite: "none",  // Required for cross-site cookies
         secure: true,  // Required for HTTPS
         path: "/",
-        domain: undefined,  // Let browser handle domain automatically
     },
     trustHost: true,  // Trust X-Forwarded-Host header from Railway proxy
 });
