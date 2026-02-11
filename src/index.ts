@@ -28,6 +28,38 @@ app.use(cors({
   exposedHeaders: ['Set-Cookie'],
 }));
 
+// Custom endpoint to get session with token (for bearer token auth)
+// MUST be placed BEFORE the generic /api/auth/* handler
+app.get('/api/auth/get-session-with-token', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.json(null);
+    }
+    
+    // Get session from better-auth using the token
+    const session = await auth.api.getSession({ headers: req.headers });
+    
+    if (session?.session) {
+      // Return session with the token included
+      return res.json({
+        user: session.user,
+        session: {
+          ...session.session,
+          token: token
+        }
+      });
+    }
+    
+    return res.json(null);
+  } catch (error) {
+    console.error('Get session error:', error);
+    res.json(null);
+  }
+});
+
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.use(express.json());
