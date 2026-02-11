@@ -8,24 +8,19 @@ export const auth = betterAuth({
     trustedOrigins: [process.env.FRONTEND_URL!],
     database: drizzleAdapter(db, {
         provider: "pg",
-        schema,
+        schema: {
+            user: schema.adminUser,
+            session: schema.adminSession,
+            account: schema.adminAccount,
+            verification: schema.adminVerification,
+        },
     }),
     emailAndPassword: {
         enabled: true,
     },
-    user: {
-        additionalFields: {
-            role: {
-                type: 'string',
-                required: true,
-                defaultValue: 'student',
-                input: true,
-            },
-            imageCldPubId: {
-                type: 'string',
-                required: false,
-                input: true,
-            }
-        }
-    }
+    session: {
+        expiresIn: 60 * 60 * 24 * 7,  // 7 days in seconds
+        updateAge: 60 * 60 * 24,  // refresh session every 1 day
+        rememberMe: 60 * 60 * 24 * 30,  // 30 days if rememberMe checked
+    },
 });

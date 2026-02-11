@@ -67,6 +67,57 @@ export const verification = pgTable("verification", {
     index("verification_identifier_idx").on(table.identifier),
 ]);
 
+export const adminUser = pgTable("admin_user", {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    email: text("email").notNull().unique(),
+    emailVerified: boolean("email_verified").notNull(),
+    image: text("image"),
+    ...timestamps
+});
+
+export const adminSession = pgTable("admin_session", {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id").notNull().references(() => adminUser.id, { onDelete: 'cascade' }),
+}, (table) => [
+    index("admin_session_user_id_idx").on(table.userId),
+]);
+
+export const adminAccount = pgTable("admin_account", {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id").notNull().references(() => adminUser.id, { onDelete: 'cascade' }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+    index("admin_account_user_id_idx").on(table.userId),
+]);
+
+export const adminVerification = pgTable("admin_verification", {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at").notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull(),
+}, (table) => [
+    index("admin_verification_identifier_idx").on(table.identifier),
+]);
+
 export const userRelations = relations(user, ({ many }) => ({
     sessions: many(session),
     accounts: many(account),
@@ -97,3 +148,15 @@ export type NewAccount = typeof account.$inferInsert;
 
 export type Verification = typeof verification.$inferSelect;
 export type NewVerification = typeof verification.$inferInsert;
+
+export type AdminUser = typeof adminUser.$inferSelect;
+export type NewAdminUser = typeof adminUser.$inferInsert;
+
+export type AdminSession = typeof adminSession.$inferSelect;
+export type NewAdminSession = typeof adminSession.$inferInsert;
+
+export type AdminAccount = typeof adminAccount.$inferSelect;
+export type NewAdminAccount = typeof adminAccount.$inferInsert;
+
+export type AdminVerification = typeof adminVerification.$inferSelect;
+export type NewAdminVerification = typeof adminVerification.$inferInsert;
