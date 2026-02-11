@@ -24,7 +24,7 @@ export const auth = betterAuth({
         rememberMe: 60 * 60 * 24 * 30,  // 30 days if rememberMe checked
     },
     cookie: {
-        sameSite: "lax",
+        sameSite: "none",  // Allow cross-site cookies
         secure: true,  // Required for HTTPS
         path: "/",
     },
