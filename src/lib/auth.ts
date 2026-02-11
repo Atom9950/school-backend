@@ -23,10 +23,8 @@ export const auth = betterAuth({
         updateAge: 60 * 60 * 24,  // refresh session every 1 day
         rememberMe: 60 * 60 * 24 * 30,  // 30 days if rememberMe checked
     },
-    cookie: {
-        sameSite: "none",  // Required for cross-site cookies
-        secure: true,  // Required for HTTPS
-        path: "/",
-    },
-    trustHost: true,  // Trust X-Forwarded-Host header from Railway proxy
+    // Disable cookies for cross-domain, rely on JWT in response
+    disableCsrfCheck: true,
+    useSecureCookies: false,
+    trustHost: true,
 });
