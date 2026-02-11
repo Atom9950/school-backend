@@ -5,7 +5,11 @@ import * as schema from "../db/schema/auth.js";
 
 export const auth = betterAuth({
     secret: process.env.BETTER_AUTH_SECRET!,
-    trustedOrigins: [process.env.FRONTEND_URL!],
+    trustedOrigins: [
+        process.env.FRONTEND_URL!,
+        "https://school-frontend-flax-nine.vercel.app",
+        "http://localhost:5173", // Keep for local development
+    ],
     database: drizzleAdapter(db, {
         provider: "pg",
         schema: {
@@ -19,12 +23,14 @@ export const auth = betterAuth({
         enabled: true,
     },
     session: {
-        expiresIn: 60 * 60 * 24 * 7,  // 7 days in seconds
-        updateAge: 60 * 60 * 24,  // refresh session every 1 day
-        rememberMe: 60 * 60 * 24 * 30,  // 30 days if rememberMe checked
+        expiresIn: 60 * 60 * 24 * 7,
+        updateAge: 60 * 60 * 24,
     },
-    // Disable cookies for cross-domain, rely on JWT in response
-    disableCsrfCheck: true,
-    useSecureCookies: false,
-    trustHost: true,
+    // Critical for production
+    advanced: {
+        useSecureCookies: process.env.NODE_ENV === "production",
+        crossSubDomainCookies: {
+            enabled: false, // Since you're on different domains
+        },
+    },
 });

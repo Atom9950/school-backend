@@ -19,10 +19,12 @@ if(!process.env.FRONTEND_URL) {
   throw new Error("FRONTEND_URL is not set in env file")
 }
 
+// In your Express/Fastify/Hono server setup
 app.use(cors({
   origin: process.env.FRONTEND_URL,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  credentials: true
+  credentials: true, // CRITICAL: Allow credentials
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.all('/api/auth/*splat', toNodeHandler(auth));
