@@ -8,7 +8,7 @@ export const auth = betterAuth({
     trustedOrigins: [
         process.env.FRONTEND_URL!,
         "https://school-frontend-flax-nine.vercel.app",
-        "http://localhost:5173", // Keep for local development
+        "http://localhost:5173",
     ],
     database: drizzleAdapter(db, {
         provider: "pg",
@@ -25,12 +25,5 @@ export const auth = betterAuth({
     session: {
         expiresIn: 60 * 60 * 24 * 7,
         updateAge: 60 * 60 * 24,
-    },
-    // Critical for production
-    advanced: {
-        useSecureCookies: process.env.NODE_ENV === "production",
-        crossSubDomainCookies: {
-            enabled: false, // Since you're on different domains
-        },
     },
 });

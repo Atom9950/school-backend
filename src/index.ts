@@ -22,9 +22,10 @@ if(!process.env.FRONTEND_URL) {
 // In your Express/Fastify/Hono server setup
 app.use(cors({
   origin: process.env.FRONTEND_URL,
-  credentials: true, // CRITICAL: Allow credentials
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie'],
 }));
 
 app.all('/api/auth/*splat', toNodeHandler(auth));
