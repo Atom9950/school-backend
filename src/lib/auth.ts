@@ -26,4 +26,8 @@ export const auth = betterAuth({
         expiresIn: 60 * 60 * 24 * 7,
         updateAge: 60 * 60 * 24,
     },
+    // This is critical - enable Bearer token auth
+    bearer: {
+        enabled: true,
+    },
 });
