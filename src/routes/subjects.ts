@@ -30,14 +30,16 @@ router.get("/", async (req, res) => {
 
         //If departmentId is provided, filter by departmentId
         if (department) {
-            const deptPattern = `%${String(department).replace(/[%_]/g, '\\$&')}%`;
-            filterConditions.push(ilike(departments.name, deptPattern));
+            const departmentId = parseInt(String(department), 10);
+            if (!isNaN(departmentId)) {
+                filterConditions.push(eq(subjects.departmentId, departmentId));
+            }
         }
 
         //combine all filter conditions using AND
         const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
 
-        const countResult = await db.select({count: sql<number>`count(*)`})
+        const countResult = await db.select({count: sql<number>`count(distinct ${subjects.id})`})
             .from(subjects)
             .leftJoin(departments, eq(subjects.departmentId, departments.id))
             .where(whereClause);
