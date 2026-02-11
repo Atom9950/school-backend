@@ -10,7 +10,7 @@ const router = express.Router();
 // Get all users with optional search, filtering and pagination
 router.get("/", async (req, res) => {
     try {
-        const { search, role, page = 1, limit = 10 } = req.query;
+        const { search, role, department, page = 1, limit = 10 } = req.query;
 
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100); // Max 100 records per page
@@ -37,21 +37,55 @@ router.get("/", async (req, res) => {
         // Combine all filters using AND if any exist
         const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
 
-        const countResult = await db
-            .select({ count: sql<number>`count(*)`})
-            .from(user)
-            .where(whereClause);
+        let usersList;
+        let totalCount = 0;
 
-        const totalCount = countResult[0]?.count ?? 0;
+        // If department filter exists, join with teacherDepartments and filter
+        if (department) {
+            const departmentId = parseInt(String(department), 10);
+            
+            const countResult = await db
+                .select({ count: sql<number>`count(distinct ${user.id})`})
+                .from(user)
+                .innerJoin(teacherDepartments, eq(user.id, teacherDepartments.teacherId))
+                .where(
+                    whereClause 
+                        ? and(whereClause, eq(teacherDepartments.departmentId, departmentId))
+                        : eq(teacherDepartments.departmentId, departmentId)
+                );
 
-        const usersList = await db
-            .select({
-                ...getTableColumns(user),
-            }).from(user)
-            .where(whereClause)
-            .orderBy(desc(user.createdAt))
-            .limit(limitPerPage)
-            .offset(offset);
+            totalCount = countResult[0]?.count ?? 0;
+
+            usersList = await db
+                .select({
+                    ...getTableColumns(user),
+                }).from(user)
+                .innerJoin(teacherDepartments, eq(user.id, teacherDepartments.teacherId))
+                .where(
+                    whereClause 
+                        ? and(whereClause, eq(teacherDepartments.departmentId, departmentId))
+                        : eq(teacherDepartments.departmentId, departmentId)
+                )
+                .orderBy(desc(user.createdAt))
+                .limit(limitPerPage)
+                .offset(offset);
+        } else {
+            const countResult = await db
+                .select({ count: sql<number>`count(*)`})
+                .from(user)
+                .where(whereClause);
+
+            totalCount = countResult[0]?.count ?? 0;
+
+            usersList = await db
+                .select({
+                    ...getTableColumns(user),
+                }).from(user)
+                .where(whereClause)
+                .orderBy(desc(user.createdAt))
+                .limit(limitPerPage)
+                .offset(offset);
+        }
 
         res.status(200).json({
             data: usersList,
