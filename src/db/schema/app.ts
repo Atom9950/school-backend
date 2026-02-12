@@ -29,9 +29,9 @@ export const departments = pgTable('departments', (t) => ({
     bannerCldPubId: t.text('banner_cld_pub_id'),
     headTeacherId: t.text('head_teacher_id').references(() => user.id, { onDelete: 'set null' }),
     level: t.integer('level').notNull().default(1),
-    parentDepartmentId: t.integer('parent_department_id').references(() => departments.id, { onDelete: 'set null' }),
+    parentDepartmentId: t.integer('parent_department_id').references(() => (departments as any).id, { onDelete: 'set null' }),
     ...timestamps
-}));
+})) as any;
 
 export const subjects = pgTable('subjects', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),

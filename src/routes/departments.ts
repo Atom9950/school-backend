@@ -139,8 +139,9 @@ router.post("/", async (req, res) => {
       })
       .returning();
 
+    const resultArray = Array.isArray(result) ? result : [result];
     res.status(201).json({
-      data: result[0],
+      data: resultArray.length > 0 ? resultArray[0] : null,
       message: "Department created successfully",
     });
   } catch (error) {
@@ -195,12 +196,13 @@ router.delete("/:id", async (req, res) => {
       .where(eq(departments.id, departmentId))
       .returning();
 
-    if (result.length === 0) {
+    const resultArray = Array.isArray(result) ? result : [result];
+    if (resultArray.length === 0) {
       return res.status(404).json({ error: "Department not found" });
     }
 
     res.status(200).json({
-      data: result[0],
+      data: resultArray[0],
       message: "Department deleted successfully",
     });
   } catch (error) {

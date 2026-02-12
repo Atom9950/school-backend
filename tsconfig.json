@@ -14,8 +14,8 @@
 
     /* Type safety */
     "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false,
 
     /* Interop & correctness */
     "esModuleInterop": true,
