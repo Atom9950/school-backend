@@ -292,12 +292,14 @@ router.put("/:id", async (req, res) => {
             bannerUrl,
             bannerCldPubId,
             bio,
-            phoneNumber
+            phoneNumber,
+            allocatedDepartments,
+            role
         } = req.body;
 
         // Check if user exists
         const userRecord = await db
-            .select({ id: user.id })
+            .select({ id: user.id, role: user.role })
             .from(user)
             .where(eq(user.id, id))
             .limit(1);
@@ -324,6 +326,29 @@ router.put("/:id", async (req, res) => {
             })
             .where(eq(user.id, id))
             .returning();
+
+        // Handle department updates for teachers
+        if (userRecord[0].role === "teacher" && allocatedDepartments && Array.isArray(allocatedDepartments)) {
+            // Delete existing department assignments
+            await db.delete(teacherDepartments)
+                .where(eq(teacherDepartments.teacherId, id));
+
+            // Add new department assignments if provided
+            if (allocatedDepartments.length > 0) {
+                const departmentIds = await db
+                    .select({ id: departments.id })
+                    .from(departments)
+                    .where(or(...allocatedDepartments.map(deptName => eq(departments.name, deptName))));
+
+                if (departmentIds.length > 0) {
+                    await db.insert(teacherDepartments)
+                        .values(departmentIds.map(dept => ({
+                            teacherId: id,
+                            departmentId: dept.id
+                        })));
+                }
+            }
+        }
 
         res.status(200).json({
             data: result[0],
