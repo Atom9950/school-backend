@@ -20,18 +20,18 @@ const timestamps = {
     updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull()
 }
 
-export const departments = pgTable('departments', {
-    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    code: varchar('code', {length: 50}).notNull().unique(),
-    name: varchar('name', {length: 255}).notNull(),
-    description: varchar('description', {length: 255}),
-    bannerUrl: text('banner_url'),
-    bannerCldPubId: text('banner_cld_pub_id'),
-    headTeacherId: text('head_teacher_id').references(() => user.id, { onDelete: 'set null' }),
-    level: integer('level').notNull().default(1),
-    parentDepartmentId: integer('parent_department_id').references(() => departments.id, { onDelete: 'set null' }),
+export const departments = pgTable('departments', (t) => ({
+    id: t.integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    code: t.varchar('code', {length: 50}).notNull().unique(),
+    name: t.varchar('name', {length: 255}).notNull(),
+    description: t.varchar('description', {length: 255}),
+    bannerUrl: t.text('banner_url'),
+    bannerCldPubId: t.text('banner_cld_pub_id'),
+    headTeacherId: t.text('head_teacher_id').references(() => user.id, { onDelete: 'set null' }),
+    level: t.integer('level').notNull().default(1),
+    parentDepartmentId: t.integer('parent_department_id').references(() => departments.id, { onDelete: 'set null' }),
     ...timestamps
-});
+}));
 
 export const subjects = pgTable('subjects', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
