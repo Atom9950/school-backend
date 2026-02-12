@@ -1,5 +1,5 @@
 import express from "express";
-import {and, desc, eq, getTableColumns, ilike, or, sql} from "drizzle-orm";
+import {and, desc, eq, getTableColumns, ilike, inArray, notInArray, or, sql} from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 import {user, classes, departments, teacherDepartments, teacherClasses} from "../db/schema/index.js";
@@ -329,24 +329,65 @@ router.put("/:id", async (req, res) => {
 
         // Handle department updates for teachers
         if (userRecord[0].role === "teacher" && allocatedDepartments && Array.isArray(allocatedDepartments)) {
+            console.log("Updating departments for teacher:", id);
+            console.log("New allocated departments:", allocatedDepartments);
+            
+            // Get the new department IDs
+            let newDepartmentIds: any[] = [];
+            let newDeptIdSet = new Set<number>();
+            
+            if (allocatedDepartments.length > 0) {
+                newDepartmentIds = await db
+                    .select({ id: departments.id })
+                    .from(departments)
+                    .where(or(...allocatedDepartments.map(deptName => eq(departments.name, deptName))));
+                newDeptIdSet = new Set(newDepartmentIds.map(d => d.id));
+            }
+            
+            console.log("New department IDs:", newDepartmentIds);
+
+            // Get all classes currently assigned to this teacher
+            const teacherCurrentClasses = await db
+                .select({ classId: teacherClasses.classId })
+                .from(teacherClasses)
+                .where(eq(teacherClasses.teacherId, id));
+
+            console.log("Teacher's current classes:", teacherCurrentClasses);
+
+            // Get all classes directly assigned to this teacher via classes.teacherId field
+            const classesAssignedToTeacher = await db
+                .select({ id: classes.id, departmentId: classes.departmentId })
+                .from(classes)
+                .where(eq(classes.teacherId, id));
+
+            console.log("Classes assigned to teacher (via classes.teacherId):", classesAssignedToTeacher);
+
+            if (classesAssignedToTeacher.length > 0) {
+                // Find classes whose departments are not in the new department list
+                const classesToRemove = classesAssignedToTeacher.filter(c => !newDeptIdSet.has(c.departmentId));
+
+                console.log("Classes to remove:", classesToRemove);
+
+                // Remove teacher assignment for those classes by setting teacherId to null
+                if (classesToRemove.length > 0) {
+                    const updateResult = await db.update(classes)
+                        .set({ teacherId: null })
+                        .where(inArray(classes.id, classesToRemove.map(c => c.id)));
+                    console.log("Update result:", updateResult);
+                }
+            }
+
             // Delete existing department assignments
             await db.delete(teacherDepartments)
                 .where(eq(teacherDepartments.teacherId, id));
 
             // Add new department assignments if provided
-            if (allocatedDepartments.length > 0) {
-                const departmentIds = await db
-                    .select({ id: departments.id })
-                    .from(departments)
-                    .where(or(...allocatedDepartments.map(deptName => eq(departments.name, deptName))));
-
-                if (departmentIds.length > 0) {
-                    await db.insert(teacherDepartments)
-                        .values(departmentIds.map(dept => ({
-                            teacherId: id,
-                            departmentId: dept.id
-                        })));
-                }
+            if (newDepartmentIds.length > 0) {
+                await db.insert(teacherDepartments)
+                    .values(newDepartmentIds.map(dept => ({
+                        teacherId: id,
+                        departmentId: dept.id
+                    })));
             }
         }
 
