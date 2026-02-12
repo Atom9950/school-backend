@@ -46,19 +46,24 @@ function romanToArabic(roman: string): number | null {
  * - ...
  * - Class 12 = 15
  * 
- * Supports: Class 1, Class I, Class-1, Class-I, etc.
+ * Supports: Class 1, Class I, Class-1, Class-I, Class 8A, Class 8-A, etc.
+ * For sections (e.g., Class 8A), extracts the base level from the class number.
  */
 
 export function extractLevelFromDepartmentName(name: string): number | null {
     const trimmed = name.trim().toLowerCase();
+    
+    // Remove section letters (A, B, C, etc.) for level extraction
+    // e.g., "class 8a" -> "class 8", "class 8-a" -> "class 8"
+    const nameWithoutSection = trimmed.replace(/\s*-?\s*[a-z]\s*$/g, '');
 
     // Nursery levels
-    if (trimmed.includes("lower nursery")) return 0;
-    if (trimmed.includes("upper nursery")) return 1;
+    if (nameWithoutSection.includes("lower nursery")) return 0;
+    if (nameWithoutSection.includes("upper nursery")) return 1;
 
     // Kindergarten levels
-    if (trimmed.includes("kg-1") || trimmed.includes("kg 1") || trimmed.includes("kg1")) return 2;
-    if (trimmed.includes("kg-2") || trimmed.includes("kg 2") || trimmed.includes("kg2")) return 3;
+    if (nameWithoutSection.includes("kg-1") || nameWithoutSection.includes("kg 1") || nameWithoutSection.includes("kg1")) return 2;
+    if (nameWithoutSection.includes("kg-2") || nameWithoutSection.includes("kg 2") || nameWithoutSection.includes("kg2")) return 3;
 
     // Class levels 1-12 (Arabic numerals)
     // Check from 12 down to 1 to avoid "class 1" matching "class 10", "class 11", "class 12"
@@ -72,7 +77,7 @@ export function extractLevelFromDepartmentName(name: string): number | null {
             `std${i}`,
         ];
 
-        if (patterns.some((pattern) => trimmed.includes(pattern))) {
+        if (patterns.some((pattern) => nameWithoutSection.includes(pattern))) {
             return 3 + i; // Class 1 starts at level 4
         }
     }
@@ -90,7 +95,7 @@ export function extractLevelFromDepartmentName(name: string): number | null {
             `std${roman}`,
         ];
 
-        if (patterns.some((pattern) => trimmed.includes(pattern.toLowerCase()))) {
+        if (patterns.some((pattern) => nameWithoutSection.includes(pattern.toLowerCase()))) {
             return 4 + i; // Class I starts at level 4
         }
     }

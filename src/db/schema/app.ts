@@ -29,6 +29,7 @@ export const departments = pgTable('departments', {
     bannerCldPubId: text('banner_cld_pub_id'),
     headTeacherId: text('head_teacher_id').references(() => user.id, { onDelete: 'set null' }),
     level: integer('level').notNull().default(1),
+    parentDepartmentId: integer('parent_department_id').references(() => departments.id, { onDelete: 'set null' }),
     ...timestamps
 });
 
@@ -118,6 +119,14 @@ export const departmentRelations = relations(departments, ({ many, one }) => ({
     headTeacher: one(user, {
         fields: [departments.headTeacherId],
         references: [user.id],
+    }),
+    parentDepartment: one(departments, {
+        fields: [departments.parentDepartmentId],
+        references: [departments.id],
+        relationName: 'parent'
+    }),
+    sections: many(departments, {
+        relationName: 'parent'
     })
 }));
 

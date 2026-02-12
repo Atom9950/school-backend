@@ -122,7 +122,7 @@ router.post("/", async (req, res) => {
     const level = extractLevelFromDepartmentName(name);
     if (level === null) {
       return res.status(400).json({ 
-        error: "Department name must be in format: Lower Nursery, Upper Nursery, KG-1, KG-2, Class 1-12" 
+        error: "Department name must be in format: Lower Nursery, Upper Nursery, KG-1, KG-2, Class 1-12, or with sections (e.g., Class 8A, Class 8B)" 
       });
     }
 
