@@ -151,6 +151,96 @@ router.post('/', async (req, res) => {
     }
 })
 
+// Update a class (PUT)
+router.put('/:id', async (req, res) => {
+    try {
+        const classId = Number(req.params.id);
+
+        if(!Number.isFinite(classId)) return res.status(400).json({ error: 'Invalid class ID.' });
+
+        const { teacherId, ...classData } = req.body;
+
+        // Include teacherId in the update if provided
+        const updateData = teacherId !== undefined ? { ...classData, teacherId } : classData;
+
+        const [updatedClass] = await db
+            .update(classes)
+            .set(updateData)
+            .where(eq(classes.id, classId))
+            .returning({ id: classes.id });
+
+        if(!updatedClass) return res.status(404).json({ error: 'Class not found.' });
+
+        // Update teacher relationship if teacherId is provided
+        if (teacherId !== undefined) {
+            // Delete existing relationship
+            await db.delete(teacherClasses).where(eq(teacherClasses.classId, classId)).catch(e => {
+                console.warn(`Failed to delete teacherClasses relationship: ${e}`);
+            });
+
+            // Add new relationship if teacherId is not null
+            if (teacherId) {
+                await db.insert(teacherClasses).values({
+                    teacherId: teacherId,
+                    classId: classId
+                }).catch(e => {
+                    console.warn(`Failed to insert teacherClasses relationship: ${e}`);
+                });
+            }
+        }
+
+        res.status(200).json({ data: updatedClass, message: 'Class updated successfully' });
+    } catch (e) {
+        console.error(`PUT /classes/:id error ${e}`);
+        res.status(500).json({ error: 'Failed to update class' })
+    }
+})
+
+// Update a class (PATCH)
+router.patch('/:id', async (req, res) => {
+    try {
+        const classId = Number(req.params.id);
+
+        if(!Number.isFinite(classId)) return res.status(400).json({ error: 'Invalid class ID.' });
+
+        const { teacherId, ...classData } = req.body;
+
+        // Include teacherId in the update if provided
+        const updateData = teacherId !== undefined ? { ...classData, teacherId } : classData;
+
+        const [updatedClass] = await db
+            .update(classes)
+            .set(updateData)
+            .where(eq(classes.id, classId))
+            .returning({ id: classes.id });
+
+        if(!updatedClass) return res.status(404).json({ error: 'Class not found.' });
+
+        // Update teacher relationship if teacherId is provided
+        if (teacherId !== undefined) {
+            // Delete existing relationship
+            await db.delete(teacherClasses).where(eq(teacherClasses.classId, classId)).catch(e => {
+                console.warn(`Failed to delete teacherClasses relationship: ${e}`);
+            });
+
+            // Add new relationship if teacherId is not null
+            if (teacherId) {
+                await db.insert(teacherClasses).values({
+                    teacherId: teacherId,
+                    classId: classId
+                }).catch(e => {
+                    console.warn(`Failed to insert teacherClasses relationship: ${e}`);
+                });
+            }
+        }
+
+        res.status(200).json({ data: updatedClass, message: 'Class updated successfully' });
+    } catch (e) {
+        console.error(`PATCH /classes/:id error ${e}`);
+        res.status(500).json({ error: 'Failed to update class' })
+    }
+})
+
 router.delete('/:id', async (req, res) => {
     try {
         const classId = Number(req.params.id);
