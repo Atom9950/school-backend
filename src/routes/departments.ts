@@ -150,6 +150,132 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Update a department (PUT)
+router.put("/:id", async (req, res) => {
+  try {
+    const departmentId = Number(req.params.id);
+
+    if (!Number.isFinite(departmentId)) {
+      return res.status(400).json({ error: "Invalid department ID" });
+    }
+
+    const { name, description, bannerUrl, bannerCldPubId, headTeacherId } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: "Department name is required" });
+    }
+
+    if (!description) {
+      return res.status(400).json({ error: "Department description is required" });
+    }
+
+    if (!bannerUrl || !bannerCldPubId) {
+      return res.status(400).json({ error: "Department banner is required" });
+    }
+
+    if (!headTeacherId) {
+      return res.status(400).json({ error: "Department head teacher is required" });
+    }
+
+    // Auto-extract level from department name
+    const level = extractLevelFromDepartmentName(name);
+    if (level === null) {
+      return res.status(400).json({ 
+        error: "Department name must be in format: Lower Nursery, Upper Nursery, KG-1, KG-2, Class 1-12, or with sections (e.g., Class 8A, Class 8B)" 
+      });
+    }
+
+    const result = await db
+      .update(departments)
+      .set({
+        name,
+        description,
+        bannerUrl,
+        bannerCldPubId,
+        headTeacherId,
+        level,
+      })
+      .where(eq(departments.id, departmentId))
+      .returning();
+
+    const resultArray = Array.isArray(result) ? result : [result];
+    if (resultArray.length === 0) {
+      return res.status(404).json({ error: "Department not found" });
+    }
+
+    res.status(200).json({
+      data: resultArray[0],
+      message: "Department updated successfully",
+    });
+  } catch (error) {
+    console.error(`PUT /departments/:id error: ${error}`);
+    res.status(500).json({ error: "Failed to update department" });
+  }
+});
+
+// Update a department (PATCH)
+router.patch("/:id", async (req, res) => {
+  try {
+    const departmentId = Number(req.params.id);
+
+    if (!Number.isFinite(departmentId)) {
+      return res.status(400).json({ error: "Invalid department ID" });
+    }
+
+    const { name, description, bannerUrl, bannerCldPubId, headTeacherId } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: "Department name is required" });
+    }
+
+    if (!description) {
+      return res.status(400).json({ error: "Department description is required" });
+    }
+
+    if (!bannerUrl || !bannerCldPubId) {
+      return res.status(400).json({ error: "Department banner is required" });
+    }
+
+    if (!headTeacherId) {
+      return res.status(400).json({ error: "Department head teacher is required" });
+    }
+
+    // Auto-extract level from department name
+    const level = extractLevelFromDepartmentName(name);
+    if (level === null) {
+      return res.status(400).json({ 
+        error: "Department name must be in format: Lower Nursery, Upper Nursery, KG-1, KG-2, Class 1-12, or with sections (e.g., Class 8A, Class 8B)" 
+      });
+    }
+
+    const result = await db
+      .update(departments)
+      .set({
+        name,
+        description,
+        bannerUrl,
+        bannerCldPubId,
+        headTeacherId,
+        level,
+      })
+      .where(eq(departments.id, departmentId))
+      .returning();
+
+    const resultArray = Array.isArray(result) ? result : [result];
+    if (resultArray.length === 0) {
+      return res.status(404).json({ error: "Department not found" });
+    }
+
+    res.status(200).json({
+      data: resultArray[0],
+      message: "Department updated successfully",
+    });
+  } catch (error) {
+    console.error(`PATCH /departments/:id error: ${error}`);
+    res.status(500).json({ error: "Failed to update department" });
+  }
+});
+
 // Delete a department
 router.delete("/:id", async (req, res) => {
   try {
