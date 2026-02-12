@@ -123,6 +123,155 @@ router.post("/", async (req, res) => {
     }
 })
 
+// Get a subject by ID
+router.get("/:id", async (req, res) => {
+    try {
+        const subjectId = Number(req.params.id);
+
+        if (!Number.isFinite(subjectId)) {
+            return res.status(400).json({ error: "Invalid subject ID" });
+        }
+
+        const [subject] = await db.select({
+            ...getTableColumns(subjects),
+            department: {
+                ...getTableColumns(departments),
+            },
+        }).from(subjects)
+         .leftJoin(departments, eq(subjects.departmentId, departments.id))
+         .where(eq(subjects.id, subjectId));
+
+        if (!subject) {
+            return res.status(404).json({ error: "Subject not found" });
+        }
+
+        res.status(200).json({ data: subject });
+    } catch (error) {
+        console.error(`GET /subjects/:id error: ${error}`);
+        res.status(500).json({ error: "Failed to fetch subject" });
+    }
+});
+
+// Update a subject (PUT)
+router.put("/:id", async (req, res) => {
+    try {
+        const subjectId = Number(req.params.id);
+
+        if (!Number.isFinite(subjectId)) {
+            return res.status(400).json({ error: "Invalid subject ID" });
+        }
+
+        const { name, code, description, department } = req.body;
+
+        // Validate required fields
+        if (!name || !code || !description || !department) {
+            return res.status(400).json({
+                error: "Missing required fields: name, code, description, department",
+            });
+        }
+
+        // Get the department by name to get its ID
+        const deptResult = await db
+            .select({ id: departments.id })
+            .from(departments)
+            .where(ilike(departments.name, String(department)))
+            .limit(1);
+
+        if (deptResult.length === 0) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        const departmentId = deptResult[0]?.id;
+        if (!departmentId) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        const result = await db
+            .update(subjects)
+            .set({
+                name,
+                code,
+                description,
+                departmentId,
+                updatedAt: new Date(),
+            })
+            .where(eq(subjects.id, subjectId))
+            .returning();
+
+        if (result.length === 0) {
+            return res.status(404).json({ error: "Subject not found" });
+        }
+
+        res.status(200).json({
+            data: result[0],
+            message: "Subject updated successfully",
+        });
+    } catch (error) {
+        console.error(`PUT /subjects/:id error: ${error}`);
+        res.status(500).json({ error: "Failed to update subject" });
+    }
+});
+
+// Update a subject (PATCH)
+router.patch("/:id", async (req, res) => {
+    try {
+        const subjectId = Number(req.params.id);
+
+        if (!Number.isFinite(subjectId)) {
+            return res.status(400).json({ error: "Invalid subject ID" });
+        }
+
+        const { name, code, description, department } = req.body;
+
+        // Validate required fields
+        if (!name || !code || !description || !department) {
+            return res.status(400).json({
+                error: "Missing required fields: name, code, description, department",
+            });
+        }
+
+        // Get the department by name to get its ID
+        const deptResult = await db
+            .select({ id: departments.id })
+            .from(departments)
+            .where(ilike(departments.name, String(department)))
+            .limit(1);
+
+        if (deptResult.length === 0) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        const departmentId = deptResult[0]?.id;
+        if (!departmentId) {
+            return res.status(404).json({ error: "Department not found" });
+        }
+
+        const result = await db
+            .update(subjects)
+            .set({
+                name,
+                code,
+                description,
+                departmentId,
+                updatedAt: new Date(),
+            })
+            .where(eq(subjects.id, subjectId))
+            .returning();
+
+        if (result.length === 0) {
+            return res.status(404).json({ error: "Subject not found" });
+        }
+
+        res.status(200).json({
+            data: result[0],
+            message: "Subject updated successfully",
+        });
+    } catch (error) {
+        console.error(`PATCH /subjects/:id error: ${error}`);
+        res.status(500).json({ error: "Failed to update subject" });
+    }
+});
+
 // Delete a subject
 router.delete("/:id", async (req, res) => {
     try {
