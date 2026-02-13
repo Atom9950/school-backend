@@ -417,6 +417,10 @@ router.get("/student/:studentId", async (req, res) => {
             const classId = record.class?.id;
             const className = record.class?.name || 'Unknown';
             
+            if (classId === undefined) {
+                return acc;
+            }
+            
             if (!acc[classId]) {
                 acc[classId] = {
                     classId,
