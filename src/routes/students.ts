@@ -392,6 +392,147 @@ router.post("/:id/promote", async (req, res) => {
     }
 })
 
+// Get available departments for transfer (departments with same level as current, excluding current department)
+router.get("/:id/available-transfers", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if student exists
+        const studentRecord = await db
+            .select()
+            .from(students)
+            .where(eq(students.id, Number(id)))
+            .limit(1);
+
+        if (studentRecord.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        const student = studentRecord[0]!;
+        const currentDeptId = student.departmentId;
+
+        // Get current department level
+        const currentDept = await db
+            .select()
+            .from(departments)
+            .where(eq(departments.id, currentDeptId))
+            .limit(1);
+
+        if (currentDept.length === 0) {
+            return res.status(404).json({ error: 'Current department not found' });
+        }
+
+        const currentLevel = currentDept[0]!.level;
+
+        // Get all departments with same level, excluding current department
+        const availableDepartments = await db
+            .select(getTableColumns(departments))
+            .from(departments)
+            .where(
+                and(
+                    eq(departments.level, currentLevel),
+                    // Exclude current department
+                    sql`${departments.id} != ${currentDeptId}`
+                )
+            )
+            .orderBy(departments.name);
+
+        res.status(200).json({
+            data: availableDepartments,
+            currentLevel: currentLevel,
+            currentDepartmentId: currentDeptId,
+        });
+
+    } catch (e) {
+        console.error(`GET /students/:id/available-transfers error: ${e}`);
+        res.status(500).json({ error: 'Failed to fetch available transfers' });
+    }
+})
+
+// Transfer student to another department at same level
+router.post("/:id/transfer", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { departmentId } = req.body;
+
+        if (!departmentId) {
+            return res.status(400).json({ error: 'Department ID is required' });
+        }
+
+        // Check if student exists
+        const existingStudent = await db
+            .select()
+            .from(students)
+            .where(eq(students.id, Number(id)))
+            .limit(1);
+
+        if (existingStudent.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        const student = existingStudent[0]!;
+
+        // Get current department level
+        const currentDept = await db
+            .select()
+            .from(departments)
+            .where(eq(departments.id, student.departmentId))
+            .limit(1);
+
+        if (currentDept.length === 0) {
+            return res.status(404).json({ error: 'Current department not found' });
+        }
+
+        const currentLevel = currentDept[0]!.level;
+
+        // Check if target department exists
+        const targetDept = await db
+            .select()
+            .from(departments)
+            .where(eq(departments.id, Number(departmentId)))
+            .limit(1);
+
+        if (targetDept.length === 0) {
+            return res.status(404).json({ error: 'Target department not found' });
+        }
+
+        // Validate that target department has same level
+        if (targetDept[0]!.level !== currentLevel) {
+            return res.status(400).json({
+                error: 'Can only transfer to a department with same level',
+                currentLevel,
+                targetLevel: targetDept[0]!.level
+            });
+        }
+
+        // Validate that target is not the current department
+        if (Number(departmentId) === student.departmentId) {
+            return res.status(400).json({
+                error: 'Cannot transfer to the same department'
+            });
+        }
+
+        // Update student's department
+        const transferredStudent = await db
+            .update(students)
+            .set({
+                departmentId: Number(departmentId),
+                updatedAt: new Date(),
+            })
+            .where(eq(students.id, Number(id)))
+            .returning();
+
+        res.status(200).json({
+            data: transferredStudent[0],
+            message: 'Student transferred successfully'
+        });
+
+    } catch (e) {
+        console.error(`POST /students/:id/transfer error: ${e}`);
+        res.status(500).json({ error: 'Failed to transfer student' });
+    }
+})
+
 // Delete a student
 router.delete("/:id", async (req, res) => {
     try {
