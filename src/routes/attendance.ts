@@ -8,7 +8,9 @@ const router = express.Router();
 // Get all attendance records with filters and pagination
 router.get("/", async (req, res) => {
     try {
-        const { classId, studentId, date, status, page = 1, limit = 10 } = req.query;
+        const { classId, studentId, date, status, departmentId, search, rollNumber, page = 1, limit = 10 } = req.query;
+
+        console.log("Attendance GET params:", { classId, studentId, date, status, departmentId, search, rollNumber, page, limit });
 
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
@@ -17,24 +19,52 @@ router.get("/", async (req, res) => {
         const filterConditions = [];
 
         if (classId) {
+            console.log("Adding classId filter:", classId);
             filterConditions.push(eq(attendance.classId, Number(classId)));
         }
 
         if (studentId) {
+            console.log("Adding studentId filter:", studentId);
             filterConditions.push(eq(attendance.studentId, Number(studentId)));
         }
 
         if (date) {
-            const targetDate = new Date(String(date));
-            const nextDate = new Date(targetDate);
-            nextDate.setDate(nextDate.getDate() + 1);
+            console.log("Adding date filter:", date);
+            const dateStr = String(date);
+            // Parse date as YYYY-MM-DD format
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+            const endDate = new Date(year, month - 1, day + 1, 0, 0, 0, 0);
+            
+            console.log("Date filter - Start:", startDate, "End:", endDate);
+            
             filterConditions.push(
-                sql`${attendance.date} >= ${targetDate} AND ${attendance.date} < ${nextDate}`
+                sql`DATE(${attendance.date}) = ${dateStr}`
             );
         }
 
         if (status) {
+            console.log("Adding status filter:", status);
             filterConditions.push(eq(attendance.status, String(status) as any));
+        }
+
+        if (departmentId) {
+            console.log("Adding departmentId filter:", departmentId);
+            filterConditions.push(eq(classes.departmentId, Number(departmentId)));
+        }
+
+        if (search) {
+            console.log("Adding search filter:", search);
+            filterConditions.push(
+                ilike(students.name, `%${search}%`)
+            );
+        }
+
+        if (rollNumber) {
+            console.log("Adding rollNumber filter:", rollNumber);
+            filterConditions.push(
+                ilike(students.rollNumber, `%${rollNumber}%`)
+            );
         }
 
         const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
@@ -42,6 +72,8 @@ router.get("/", async (req, res) => {
         const countResult = await db
             .select({ count: sql<number>`count(*)` })
             .from(attendance)
+            .leftJoin(classes, eq(attendance.classId, classes.id))
+            .leftJoin(students, eq(attendance.studentId, students.id))
             .where(whereClause);
 
         const totalCount = countResult[0]?.count ?? 0;
