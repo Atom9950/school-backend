@@ -114,6 +114,23 @@ export const students = pgTable('students', {
     index('students_email_idx').on(table.email),
 ]);
 
+export const attendanceStatusEnum = pgEnum('attendance_status', ['present', 'absent', 'late']);
+
+export const attendance = pgTable('attendance', {
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+    classId: integer('class_id').notNull().references(() => classes.id, { onDelete: 'cascade' }),
+    studentId: integer('student_id').notNull().references(() => students.id, { onDelete: 'cascade' }),
+    date: timestamp('date').notNull(),
+    status: attendanceStatusEnum('status').notNull(),
+    remarks: text('remarks'),
+    ...timestamps
+}, (table) => [
+    index('attendance_class_id_idx').on(table.classId),
+    index('attendance_student_id_idx').on(table.studentId),
+    index('attendance_date_idx').on(table.date),
+    unique('attendance_class_student_date_unique').on(table.classId, table.studentId, table.date),
+]);
+
 export const departmentRelations = relations(departments, ({ many, one }) => ({
     subjects: many(subjects),
     headTeacher: one(user, {
@@ -183,10 +200,22 @@ export const teacherClassesRelations = relations(teacherClasses, ({ one }) => ({
     }),
 }));
 
-export const studentsRelations = relations(students, ({ one }) => ({
+export const studentsRelations = relations(students, ({ one, many }) => ({
     department: one(departments, {
         fields: [students.departmentId],
         references: [departments.id],
+    }),
+    attendance: many(attendance)
+}));
+
+export const attendanceRelations = relations(attendance, ({ one }) => ({
+    class: one(classes, {
+        fields: [attendance.classId],
+        references: [classes.id],
+    }),
+    student: one(students, {
+        fields: [attendance.studentId],
+        references: [students.id],
     }),
 }));
 
@@ -210,3 +239,6 @@ export type NewTeacherClass = typeof teacherClasses.$inferInsert;
 
 export type Student = typeof students.$inferSelect;
 export type NewStudent = typeof students.$inferInsert;
+
+export type Attendance = typeof attendance.$inferSelect;
+export type NewAttendance = typeof attendance.$inferInsert;

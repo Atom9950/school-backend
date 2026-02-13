@@ -1,0 +1,357 @@
+import express from "express";
+import { and, desc, eq, getTableColumns, ilike, sql } from "drizzle-orm";
+import { attendance, classes, students } from "../db/schema/index.js";
+import { db } from "../db/index.js";
+
+const router = express.Router();
+
+// Get all attendance records with filters and pagination
+router.get("/", async (req, res) => {
+    try {
+        const { classId, studentId, date, status, page = 1, limit = 10 } = req.query;
+
+        const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
+        const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
+        const offset = (currentPage - 1) * limitPerPage;
+
+        const filterConditions = [];
+
+        if (classId) {
+            filterConditions.push(eq(attendance.classId, Number(classId)));
+        }
+
+        if (studentId) {
+            filterConditions.push(eq(attendance.studentId, Number(studentId)));
+        }
+
+        if (date) {
+            const targetDate = new Date(String(date));
+            const nextDate = new Date(targetDate);
+            nextDate.setDate(nextDate.getDate() + 1);
+            filterConditions.push(
+                sql`${attendance.date} >= ${targetDate} AND ${attendance.date} < ${nextDate}`
+            );
+        }
+
+        if (status) {
+            filterConditions.push(eq(attendance.status, String(status) as any));
+        }
+
+        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
+
+        const countResult = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(attendance)
+            .where(whereClause);
+
+        const totalCount = countResult[0]?.count ?? 0;
+
+        const attendanceRecords = await db
+            .select({
+                ...getTableColumns(attendance),
+                class: {
+                    id: classes.id,
+                    name: classes.name,
+                },
+                student: {
+                    id: students.id,
+                    name: students.name,
+                    rollNumber: students.rollNumber,
+                },
+            })
+            .from(attendance)
+            .leftJoin(classes, eq(attendance.classId, classes.id))
+            .leftJoin(students, eq(attendance.studentId, students.id))
+            .where(whereClause)
+            .orderBy(desc(attendance.date))
+            .limit(limitPerPage)
+            .offset(offset);
+
+        res.status(200).json({
+            data: attendanceRecords,
+            pagination: {
+                page: currentPage,
+                limit: limitPerPage,
+                total: totalCount,
+                totalPages: Math.ceil(totalCount / limitPerPage),
+            }
+        });
+
+    } catch (e) {
+        console.error(`GET /attendance error: ${e}`);
+        res.status(500).json({ error: 'Failed to get attendance records' });
+    }
+});
+
+// Get attendance by ID
+router.get("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const record = await db
+            .select({
+                ...getTableColumns(attendance),
+                class: {
+                    id: classes.id,
+                    name: classes.name,
+                },
+                student: {
+                    id: students.id,
+                    name: students.name,
+                    rollNumber: students.rollNumber,
+                },
+            })
+            .from(attendance)
+            .leftJoin(classes, eq(attendance.classId, classes.id))
+            .leftJoin(students, eq(attendance.studentId, students.id))
+            .where(eq(attendance.id, Number(id)))
+            .limit(1);
+
+        if (record.length === 0) {
+            return res.status(404).json({ error: 'Attendance record not found' });
+        }
+
+        res.status(200).json({ data: record[0] });
+
+    } catch (e) {
+        console.error(`GET /attendance/:id error: ${e}`);
+        res.status(500).json({ error: 'Failed to get attendance record' });
+    }
+});
+
+// Create attendance record
+router.post("/", async (req, res) => {
+    try {
+        const { classId, studentId, date, status, remarks } = req.body;
+
+        if (!classId || !studentId || !date || !status) {
+            return res.status(400).json({
+                error: 'Missing required fields: classId, studentId, date, status'
+            });
+        }
+
+        if (!['present', 'absent', 'late'].includes(status)) {
+            return res.status(400).json({
+                error: 'Invalid status. Must be one of: present, absent, late'
+            });
+        }
+
+        // Check if class exists
+        const classExists = await db
+            .select()
+            .from(classes)
+            .where(eq(classes.id, Number(classId)))
+            .limit(1);
+
+        if (classExists.length === 0) {
+            return res.status(404).json({ error: 'Class not found' });
+        }
+
+        // Check if student exists
+        const studentExists = await db
+            .select()
+            .from(students)
+            .where(eq(students.id, Number(studentId)))
+            .limit(1);
+
+        if (studentExists.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        // Create attendance record
+        const newRecord = await db
+            .insert(attendance)
+            .values({
+                classId: Number(classId),
+                studentId: Number(studentId),
+                date: new Date(date),
+                status: status as any,
+                remarks,
+            })
+            .returning();
+
+        res.status(201).json({
+            data: newRecord[0]
+        });
+
+    } catch (e: any) {
+        console.error(`POST /attendance error: ${e}`);
+        if (e.code === '23505') {
+            return res.status(400).json({
+                error: 'Attendance record for this student in this class on this date already exists'
+            });
+        }
+        res.status(500).json({ error: 'Failed to create attendance record' });
+    }
+});
+
+// Bulk create attendance records
+router.post("/bulk", async (req, res) => {
+    try {
+        const { records } = req.body;
+
+        if (!Array.isArray(records) || records.length === 0) {
+            return res.status(400).json({
+                error: 'Invalid input. Provide an array of attendance records'
+            });
+        }
+
+        // Validate all records
+        for (const record of records) {
+            if (!record.classId || !record.studentId || !record.date || !record.status) {
+                return res.status(400).json({
+                    error: 'Each record must have: classId, studentId, date, status'
+                });
+            }
+            if (!['present', 'absent', 'late'].includes(record.status)) {
+                return res.status(400).json({
+                    error: 'Invalid status. Must be one of: present, absent, late'
+                });
+            }
+        }
+
+        // Insert all records
+        const createdRecords = await db
+            .insert(attendance)
+            .values(
+                records.map((r: any) => ({
+                    classId: Number(r.classId),
+                    studentId: Number(r.studentId),
+                    date: new Date(r.date),
+                    status: r.status,
+                    remarks: r.remarks,
+                }))
+            )
+            .returning();
+
+        res.status(201).json({
+            data: createdRecords,
+            count: createdRecords.length
+        });
+
+    } catch (e: any) {
+        console.error(`POST /attendance/bulk error: ${e}`);
+        res.status(500).json({ error: 'Failed to create attendance records' });
+    }
+});
+
+// Update attendance record
+router.put("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, remarks } = req.body;
+
+        if (!status && remarks === undefined) {
+            return res.status(400).json({
+                error: 'Provide at least one field to update: status, remarks'
+            });
+        }
+
+        if (status && !['present', 'absent', 'late'].includes(status)) {
+            return res.status(400).json({
+                error: 'Invalid status. Must be one of: present, absent, late'
+            });
+        }
+
+        // Check if record exists
+        const existingRecord = await db
+            .select()
+            .from(attendance)
+            .where(eq(attendance.id, Number(id)))
+            .limit(1);
+
+        if (existingRecord.length === 0) {
+            return res.status(404).json({ error: 'Attendance record not found' });
+        }
+
+        const updatedRecord = await db
+            .update(attendance)
+            .set({
+                status: status as any,
+                remarks,
+                updatedAt: new Date(),
+            })
+            .where(eq(attendance.id, Number(id)))
+            .returning();
+
+        res.status(200).json({
+            data: updatedRecord[0]
+        });
+
+    } catch (e) {
+        console.error(`PUT /attendance/:id error: ${e}`);
+        res.status(500).json({ error: 'Failed to update attendance record' });
+    }
+});
+
+// Delete attendance record
+router.delete("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Check if record exists
+        const existingRecord = await db
+            .select()
+            .from(attendance)
+            .where(eq(attendance.id, Number(id)))
+            .limit(1);
+
+        if (existingRecord.length === 0) {
+            return res.status(404).json({ error: 'Attendance record not found' });
+        }
+
+        await db
+            .delete(attendance)
+            .where(eq(attendance.id, Number(id)));
+
+        res.status(200).json({
+            message: 'Attendance record deleted successfully'
+        });
+
+    } catch (e) {
+        console.error(`DELETE /attendance/:id error: ${e}`);
+        res.status(500).json({ error: 'Failed to delete attendance record' });
+    }
+});
+
+// Get attendance report for a class on a specific date
+router.get("/class/:classId/date/:date", async (req, res) => {
+    try {
+        const { classId, date } = req.params;
+
+        const targetDate = new Date(String(date));
+        const nextDate = new Date(targetDate);
+        nextDate.setDate(nextDate.getDate() + 1);
+
+        const records = await db
+            .select({
+                ...getTableColumns(attendance),
+                student: {
+                    id: students.id,
+                    name: students.name,
+                    rollNumber: students.rollNumber,
+                },
+            })
+            .from(attendance)
+            .leftJoin(students, eq(attendance.studentId, students.id))
+            .where(
+                and(
+                    eq(attendance.classId, Number(classId)),
+                    sql`${attendance.date} >= ${targetDate} AND ${attendance.date} < ${nextDate}`
+                )
+            )
+            .orderBy(students.name);
+
+        res.status(200).json({
+            data: records,
+            date: targetDate.toISOString().split('T')[0],
+            classId: Number(classId)
+        });
+
+    } catch (e) {
+        console.error(`GET /attendance/class/:classId/date/:date error: ${e}`);
+        res.status(500).json({ error: 'Failed to get attendance report' });
+    }
+});
+
+export default router;

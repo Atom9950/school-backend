@@ -9,6 +9,7 @@ import departmentsRouter from './routes/departments.js';
 import usersRouter from './routes/users.js';
 import classesRouter from './routes/classes.js';
 import studentsRouter from './routes/students.js';
+import attendanceRouter from './routes/attendance.js';
 import securityMiddleware from './middleware/security.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './lib/auth.js';
@@ -97,6 +98,7 @@ app.use('/api/departments', departmentsRouter)
 app.use('/api/users', usersRouter)
 app.use('/api/classes', classesRouter)
 app.use('/api/students', studentsRouter)
+app.use('/api/attendance', attendanceRouter)
 
 app.get('/', (req, res) => {
   res.send('Hello, welcome to the Classroom API!');
