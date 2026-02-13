@@ -7,6 +7,7 @@ import {
   departments,
   subjects,
   teacherClasses,
+  students,
 } from "../db/schema/app.js";
 import { user } from "../db/schema/auth.js";
 
@@ -179,7 +180,21 @@ router.get("/:id", async (req, res) => {
 
   if (!classDetails) return res.status(404).json({ error: "No Class found." });
 
-  res.status(200).json({ data: classDetails });
+  // Get the total number of students allocated to the department
+  const departmentId = classDetails.departmentId;
+  const [studentCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(students)
+    .where(eq(students.departmentId, departmentId));
+
+  const totalStudents = studentCount?.count ?? 0;
+
+  res.status(200).json({ 
+    data: {
+      ...classDetails,
+      totalStudents: totalStudents
+    }
+  });
 });
 
 router.post("/", async (req, res) => {
