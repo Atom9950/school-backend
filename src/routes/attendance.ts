@@ -386,4 +386,75 @@ router.get("/class/:classId/date/:date", async (req, res) => {
     }
 });
 
+// Get attendance report for a specific student
+router.get("/student/:studentId", async (req, res) => {
+    try {
+        const { studentId } = req.params;
+
+        // Get all attendance records for the student
+        const attendanceRecords = await db
+            .select({
+                ...getTableColumns(attendance),
+                class: {
+                    id: classes.id,
+                    name: classes.name,
+                },
+            })
+            .from(attendance)
+            .leftJoin(classes, eq(attendance.classId, classes.id))
+            .where(eq(attendance.studentId, Number(studentId)))
+            .orderBy(desc(attendance.date));
+
+        // Calculate statistics
+        const total = attendanceRecords.length;
+        const present = attendanceRecords.filter(a => a.status === 'present').length;
+        const absent = attendanceRecords.filter(a => a.status === 'absent').length;
+        const late = attendanceRecords.filter(a => a.status === 'late').length;
+        const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
+
+        // Group by class
+        const byClass = attendanceRecords.reduce((acc: any, record) => {
+            const classId = record.class?.id;
+            const className = record.class?.name || 'Unknown';
+            
+            if (!acc[classId]) {
+                acc[classId] = {
+                    classId,
+                    className,
+                    present: 0,
+                    absent: 0,
+                    late: 0,
+                    total: 0,
+                    percentage: 0,
+                };
+            }
+
+            acc[classId].total += 1;
+            if (record.status === 'present') acc[classId].present += 1;
+            if (record.status === 'absent') acc[classId].absent += 1;
+            if (record.status === 'late') acc[classId].late += 1;
+            acc[classId].percentage = Math.round((acc[classId].present / acc[classId].total) * 100);
+
+            return acc;
+        }, {});
+
+        res.status(200).json({
+            data: {
+                summary: {
+                    total,
+                    present,
+                    absent,
+                    late,
+                    percentage,
+                },
+                byClass: Object.values(byClass),
+            }
+        });
+
+    } catch (e) {
+        console.error(`GET /attendance/student/:studentId error: ${e}`);
+        res.status(500).json({ error: 'Failed to get attendance report' });
+    }
+});
+
 export default router;
