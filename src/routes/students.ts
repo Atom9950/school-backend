@@ -186,7 +186,7 @@ router.post("/", async (req, res) => {
     }
 })
 
-// Update a student
+// Update a student (PUT)
 router.put("/:id", async (req, res) => {
     try {
         const { id } = req.params;
@@ -260,6 +260,84 @@ router.put("/:id", async (req, res) => {
 
     } catch (e) {
         console.error(`PUT /students/:id error: ${e}`);
+        res.status(500).json({ error: 'Failed to update student' });
+    }
+})
+
+// Update a student (PATCH)
+router.patch("/:id", async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            name,
+            email,
+            age,
+            gender,
+            fathersName,
+            mothersName,
+            address,
+            phoneNumber,
+            whatsappNumber,
+            admissionDate,
+            departmentId,
+            rollNumber,
+            image,
+            imageCldPubId,
+        } = req.body;
+
+        // Check if student exists
+        const existingStudent = await db
+            .select()
+            .from(students)
+            .where(eq(students.id, Number(id)))
+            .limit(1);
+
+        if (existingStudent.length === 0) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        // Check if new email already exists (and it's different from current email)
+         if (email && email !== existingStudent[0]?.email) {
+             const emailExists = await db
+                 .select()
+                 .from(students)
+                 .where(eq(students.email, email))
+                 .limit(1);
+
+             if (emailExists.length > 0) {
+                 return res.status(400).json({ error: 'Email already exists' });
+             }
+         }
+
+        // Update student
+        const updatedStudent = await db
+            .update(students)
+            .set({
+                name,
+                email,
+                age: age ? Number(age) : undefined,
+                gender,
+                fathersName,
+                mothersName,
+                address,
+                phoneNumber,
+                whatsappNumber,
+                admissionDate: admissionDate ? new Date(admissionDate) : undefined,
+                departmentId: departmentId ? Number(departmentId) : undefined,
+                rollNumber,
+                image,
+                imageCldPubId,
+                updatedAt: new Date(),
+            })
+            .where(eq(students.id, Number(id)))
+            .returning();
+
+        res.status(200).json({
+            data: updatedStudent[0]
+        });
+
+    } catch (e) {
+        console.error(`PATCH /students/:id error: ${e}`);
         res.status(500).json({ error: 'Failed to update student' });
     }
 })
