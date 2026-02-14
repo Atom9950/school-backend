@@ -5,6 +5,11 @@ import {ArcjetNodeRequest, slidingWindow } from "@arcjet/node";
 
 const securityMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     if(process.env.NODE_ENV === 'test') return next();
+    
+    // Skip security checks for auth endpoints - they need to work without authentication
+    if (req.path.startsWith('/api/auth')) {
+        return next();
+    }
 
     try {
         const role: RateLimitRole = req.user?.role ?? "guest"; // Default to "guest" if no role is found
