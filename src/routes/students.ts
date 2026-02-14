@@ -10,7 +10,7 @@ const router = express.Router();
 // Get all students with optional search, filtering and pagination
 router.get("/", async (req, res) => {
     try {
-        const { search, department, departmentId, gender, page = 1, limit = 10 } = req.query;
+        const { search, department, departmentId, gender, rollNumber, page = 1, limit = 10 } = req.query;
 
         const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
         const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100);
@@ -49,6 +49,13 @@ router.get("/", async (req, res) => {
         if (gender) {
             filterConditions.push(
                 eq(students.gender, String(gender))
+            );
+        }
+
+        // If rollNumber filter exists, match by roll number (case-insensitive)
+        if (rollNumber) {
+            filterConditions.push(
+                ilike(students.rollNumber, `%${rollNumber}%`)
             );
         }
 
